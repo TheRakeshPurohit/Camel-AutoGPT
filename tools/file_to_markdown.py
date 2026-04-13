@@ -1,7 +1,7 @@
 from pathlib import Path
 from markitdown import MarkItDown
 
-input_path = Path("../raw/PharmaBench.pdf")
+input_path = Path("../raw/")  # add files in raw/ to convert into .md format
 output_path = input_path.with_suffix(".md")
 
 # create md
