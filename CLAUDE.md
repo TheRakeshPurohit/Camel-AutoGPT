@@ -71,6 +71,7 @@ Steps (in order):
 7. Update/create concept pages for key ideas and frameworks discussed
 8. Flag any contradictions with existing wiki content
 9. Append to `wiki/log.md`: `## [YYYY-MM-DD] ingest | <Title>`
+10. **Post-ingest validation** — check for broken `[[wikilinks]]`, verify all new pages are in `index.md`, print a change summary
 
 ### Source Page Format
 
@@ -99,6 +100,48 @@ source_file: raw/...
 
 ## Contradictions
 - Contradicts [[OtherPage]] on: ...
+```
+
+### Domain-Specific Templates
+
+If the source falls into a specific domain (e.g., personal diary, meeting notes), the agent should use a specialized template instead of the default generic one above:
+
+#### Diary / Journal Template
+```markdown
+---
+title: "YYYY-MM-DD Diary"
+type: source
+tags: [diary]
+date: YYYY-MM-DD
+---
+## Event Summary
+...
+## Key Decisions
+...
+## Energy & Mood
+...
+## Connections
+...
+## Shifts & Contradictions
+...
+```
+
+#### Meeting Notes Template
+```markdown
+---
+title: "Meeting Title"
+type: source
+tags: [meeting]
+date: YYYY-MM-DD
+---
+## Goal
+...
+## Key Discussions
+...
+## Decisions Made
+...
+## Action Items
+...
 ```
 
 ---
