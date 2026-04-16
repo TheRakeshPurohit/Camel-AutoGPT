@@ -2,12 +2,12 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**A coding agent skill.** Drop source documents into `raw/` and type `/wiki-ingest` — the agent reads them, extracts knowledge, and builds a persistent interlinked wiki. Every new source makes the wiki richer. You never write it.
+**A coding agent skill.** Drop source documents into `raw/` and tell the agent to ingest them — it reads them, extracts knowledge, and builds a persistent interlinked wiki. Every new source makes the wiki richer. You never write it.
 
 > Most knowledge tools make you search your own notes. This one reads everything you've collected and writes a structured wiki that compounds over time — cross-references already built, contradictions already flagged, synthesis already done.
 
 ```
-/wiki-ingest raw/papers/attention-is-all-you-need.md
+ingest raw/papers/attention-is-all-you-need.md
 ```
 
 ```
@@ -36,7 +36,7 @@ cd llm-wiki-agent
 Open in your agent — no API key or Python setup needed:
 
 ```bash
-claude      # reads CLAUDE.md + .claude/commands/
+claude      # reads CLAUDE.md + .claude/commands/ (slash commands available)
 codex       # reads AGENTS.md
 opencode    # reads AGENTS.md
 gemini      # reads GEMINI.md
@@ -44,24 +44,24 @@ gemini      # reads GEMINI.md
 
 ## Usage
 
+All agents understand natural language and shorthand triggers:
+
 ```
-/wiki-ingest raw/papers/my-paper.md          # ingest a source into the wiki
-/wiki-ingest raw/articles/my-article.md      # works on any markdown file
-
-/wiki-query "what are the main themes?"      # synthesize answer from wiki pages
-/wiki-query "how does X relate to Y?"        # with [[wikilink]] citations
-
-/wiki-lint                                   # find orphans, contradictions, gaps
-/wiki-graph                                  # build graph.html from all wikilinks
+ingest raw/papers/my-paper.md              # ingest a source into the wiki
+query: what are the main themes?           # synthesize answer from wiki pages
+lint                                       # find orphans, contradictions, gaps
+build graph                                # build graph.html from all wikilinks
 ```
 
-Plain English also works with any agent:
+Plain English works too:
 ```
 "Ingest this paper: raw/papers/llama2.md"
 "What does the wiki say about attention mechanisms?"
 "Check for contradictions across sources"
 "Build the knowledge graph and tell me the most connected nodes"
 ```
+
+**Claude Code** also provides `/wiki-ingest`, `/wiki-query`, `/wiki-lint`, `/wiki-graph` as slash commands (via `.claude/commands/`). These are Claude Code-specific — other agents use the natural language triggers above, which work identically.
 
 Works with any markdown source — articles, papers, book chapters, meeting notes, journal entries, research summaries.
 
