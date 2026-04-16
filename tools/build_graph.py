@@ -1060,13 +1060,22 @@ function applyFilters(query = searchInput.value, selectedNodeId = activeNodeId) 
 }}
 
 const container = document.getElementById("graph");
+
+// Adaptive physics based on graph size
+const nodeCount = originalNodes.length;
+const gravConst = nodeCount > 80 ? -8000 : nodeCount > 30 ? -5000 : -2000;
+const springLen = nodeCount > 80 ? 250 : nodeCount > 30 ? 200 : 150;
+
 const network = new vis.Network(container, {{ nodes, edges }}, {{
   nodes: {{
     shape: "dot",
-    size: 10,
     font: {{ color: "#ddd", size: 12, strokeWidth: 3, strokeColor: "#111" }},
     borderWidth: 1.5,
-    scaling: {{ label: {{ drawThreshold: 9, maxVisible: 18 }} }},
+    scaling: {{
+      min: 8,
+      max: 40,
+      label: {{ enabled: true, min: 10, max: 20, drawThreshold: 6, maxVisible: 24 }},
+    }},
   }},
   edges: {{
     width: 0.8,
@@ -1076,10 +1085,16 @@ const network = new vis.Network(container, {{ nodes, edges }}, {{
     hoverWidth: 2,
   }},
   physics: {{
-    stabilization: {{ iterations: 200, updateInterval: 25 }},
-    barnesHut: {{ gravitationalConstant: -3000, springLength: 200, springConstant: 0.02, damping: 0.12 }},
+    stabilization: {{ iterations: 250, updateInterval: 25, fit: true }},
+    barnesHut: {{ gravitationalConstant: gravConst, springLength: springLen, springConstant: 0.02, damping: 0.15 }},
+    minVelocity: 0.75,
   }},
   interaction: {{ hover: true, tooltipDelay: 150, hideEdgesOnDrag: true, hideEdgesOnZoom: true }},
+}});
+
+// Ensure the graph fits the viewport after physics stabilization
+network.once("stabilizationIterationsDone", function () {{
+  network.fit({{ animation: {{ duration: 400, easingFunction: "easeInOutQuad" }} }});
 }});
 
 function focusNode(nodeId) {{
@@ -1176,6 +1191,14 @@ def build_graph(infer: bool = True, open_browser: bool = False, clean: bool = Fa
         if comm_id >= 0:
             node["color"] = COMMUNITY_COLORS[comm_id % len(COMMUNITY_COLORS)]
         node["group"] = comm_id
+
+    # Compute degree-based node sizing (value) for vis.js scaling
+    degree_map: dict[str, int] = {}
+    for e in edges:
+        degree_map[e["from"]] = degree_map.get(e["from"], 0) + 1
+        degree_map[e["to"]] = degree_map.get(e["to"], 0) + 1
+    for node in nodes:
+        node["value"] = degree_map.get(node["id"], 0) + 1  # +1 so isolated nodes are still visible
 
     # Save graph.json
     graph_data = {"nodes": nodes, "edges": edges, "built": today}
