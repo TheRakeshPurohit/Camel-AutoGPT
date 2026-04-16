@@ -4,18 +4,19 @@ from pathlib import Path
 from markitdown import MarkItDown
 
 
-def convert_directory_to_md(input_dir: Path):
+def convert_directory_to_md(input_dir: Path, delete_source: bool = False):
     """
     Converts all files in a dictory to a Markdown format. Original files in the folder will be deleted.
-    :param input_dir:
+    :param input_dir: str
         The Path object pointing to the directory to process.
+    :param delete_source: bool = False
+        Whether to delete the original source files. Defaults to False.
     """
 
     md = MarkItDown(enable_plugins=False)
 
     # get list of files to convert
-    files_to_process = [f for f in input_dir.iterdir() if f.is_file()]
-    total = len(files_to_process)
+    files_to_process = [f for f in input_dir.rglob('*') if f.is_file()]
 
     if not files_to_process:
         print(f"No files found in {input_dir}!")
@@ -23,8 +24,8 @@ def convert_directory_to_md(input_dir: Path):
 
     for file_path in tqdm(files_to_process, desc="Converting Files"):
         # skip .ds and .gitkeep files
-        if file_path.suffix in ['.ds', '.gitkeep']:
-            tqdm.write(f"Ignoring '.ds' and '.gitkeep': {file_path.name}")
+        if file_path.name.startswith('.'):
+            print(f"Skipping conversion of {file_path.name}")
             continue
 
         # convert filepath to md
@@ -34,11 +35,12 @@ def convert_directory_to_md(input_dir: Path):
             result = md.convert(str(file_path))
             # save to .md
             output_path.write_text(result.text_content, encoding="utf-8")
-            # remove original file
-            file_path.unlink()
+            # optional remove original file
+            if delete_source:
+                file_path.unlink()
             tqdm.write(f"Converted: {file_path.name}")
-        except Exception:
-            tqdm.write(f"FAILED: Could not convert '{file_path.name}'. Skipping.")
+        except Exception as e:
+            tqdm.write(f"FAILED: Could not convert '{file_path.name}'. Reason: {e}")
 
 
 def main(args):
@@ -65,6 +67,11 @@ if __name__ == "__main__":
         "--input_dir",
         type=str,
         help="The path to the directory containing files to convert."
+    )
+    parser.add_argument(
+        "--delete_source",
+        type=bool,
+        help="Whether to delete the original source files."
     )
     args = parser.parse_args()
 
