@@ -23,8 +23,8 @@ def convert_directory_to_md(input_dir: Path, delete_source: bool = False):
         return
 
     for file_path in tqdm(files_to_process, desc="Converting Files"):
-        # skip .ds and .gitkeep files
-        if file_path.name.startswith('.'):
+        # skip hidden files and existing markdown files
+        if file_path.name.startswith('.') or file_path.suffix.lower() == '.md':
             print(f"Skipping conversion of {file_path.name}")
             continue
 
@@ -52,7 +52,7 @@ def main(args):
 
     # execute
     try:
-        convert_directory_to_md(input_path)
+        convert_directory_to_md(input_path, args.delete_source)
         print("\nConversion process complete.")
     except FileNotFoundError:
         print(f"\nError: Input directory not found at {input_path}")
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--delete_source",
-        type=bool,
+        action="store_true",
         help="Whether to delete the original source files."
     )
     args = parser.parse_args()
