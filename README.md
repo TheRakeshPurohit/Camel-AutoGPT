@@ -226,8 +226,40 @@ If you want to keep the LLM Wiki Agent repository separate from your main person
 - **Graph View:** Filter out `index.md` and `log.md` (e.g. `-file:index.md -file:log.md`) to avoid them becoming gravity wells in your Obsidian graph.
 - **Dataview:** Use the community plugin [Dataview](https://blacksmithgu.github.io/obsidian-dataview/) to query the YAML frontmatter the agent automatically injects (e.g., `type: source`, `tags: [diary]`).
 
+## Converting PDFs and arXiv Papers
+
+The wiki ingests Markdown files. Use `tools/pdf2md.py` to convert PDFs and arXiv papers before ingesting:
+
+```bash
+# arXiv papers — by ID or URL (uses arxiv2md, no PDF parsing needed)
+python tools/pdf2md.py 2401.12345
+python tools/pdf2md.py https://arxiv.org/abs/2401.12345
+
+# Local PDFs — auto-selects the best available backend
+python tools/pdf2md.py paper.pdf
+python tools/pdf2md.py paper.pdf --backend marker     # complex multi-column layouts
+python tools/pdf2md.py paper.pdf --backend pymupdf4llm # fast, lightweight
+
+# Custom output path
+python tools/pdf2md.py paper.pdf -o raw/papers/my-paper.md
+```
+
+Then ingest as usual:
+```
+ingest raw/papers/my-paper.md
+```
+
+Install at least one conversion backend:
+
+| Backend | Install | Best for |
+|---|---|---|
+| [arxiv2md](https://github.com/ryansingman/arxiv2md) | `pip install arxiv2markdown` | arXiv papers (uses structured source, avoids PDF parsing) |
+| [Marker](https://github.com/VikParuchuri/marker) | `pip install marker-pdf` | Complex academic PDFs with multi-column layouts, tables, equations |
+| [PyMuPDF4LLM](https://github.com/pymupdf/RAG) | `pip install pymupdf4llm` | Fast extraction from native-text PDFs (no GPU needed) |
+
 ## Tips
 
+- Use `tools/pdf2md.py` to convert PDFs and arXiv papers to Markdown before ingesting — see [Converting PDFs](#converting-pdfs-and-arxiv-papers)
 - Query answers are shown first — the agent then asks if you want to file them as synthesis pages. Your explorations compound just like ingested sources
 - The wiki is a git repo — version history for free
 - Standalone Python scripts in `tools/` work without a coding agent (require `ANTHROPIC_API_KEY`)
