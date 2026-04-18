@@ -231,13 +231,13 @@ If you want to keep the LLM Wiki Agent repository separate from your main person
 The wiki ingests Markdown files. Use 'tools/files_to_md.py' to convert files to markdown before ingesting:
 
 ```bash
-python tools/files_to_md.py --input_dir  raw/
+python tools/files_to_md.py --input_dir  ../raw/
 ```
 
 optionally, if users would like to delete source files (i.e. if users keep source files in another folder), they can be removed during conversion:
 
 ```bash
-python tools/files_to_md.py --input_dir raw/ --delete_source
+python tools/files_to_md.py --input_dir ../raw/ --delete_source
 ```
 
 then ingest as usual:
