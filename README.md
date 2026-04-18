@@ -226,8 +226,32 @@ If you want to keep the LLM Wiki Agent repository separate from your main person
 - **Graph View:** Filter out `index.md` and `log.md` (e.g. `-file:index.md -file:log.md`) to avoid them becoming gravity wells in your Obsidian graph.
 - **Dataview:** Use the community plugin [Dataview](https://blacksmithgu.github.io/obsidian-dataview/) to query the YAML frontmatter the agent automatically injects (e.g., `type: source`, `tags: [diary]`).
 
+## Converting Files to Markdown
+
+The wiki ingests Markdown files. Use 'tools/files_to_md.py' to convert files to markdown before ingesting:
+
+```bash
+python tools/files_to_md.py --input_dir  raw/
+```
+
+optionally, if users would like to delete source files (i.e. if users keep source files in another folder), they can be removed during conversion:
+
+```bash
+python tools/files_to_md.py --input_dir raw/ --delete_source
+```
+
+then ingest as usual:
+```
+ingest raw/papers/example.md
+```
+
+Install files using the pyproject.toml or manually install the following:
+[markitdown](https://github.com/microsoft/markitdown) | 'pip install markitdown' | for converting files to markdown
+[tqdm](https://github.com/tqdm/tqdm) | 'pip install tqdm' | for progress bar during conversion
+
 ## Tips
 
+- use 'files_to_md.py' to convert files to Markdown before ingesting - see [Converting Files to Markdown](#converting-files-to-markdown)
 - Query answers are shown first — the agent then asks if you want to file them as synthesis pages. Your explorations compound just like ingested sources
 - The wiki is a git repo — version history for free
 - Standalone Python scripts in `tools/` work without a coding agent (require `ANTHROPIC_API_KEY`)
