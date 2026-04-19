@@ -13,7 +13,8 @@ Describe what you want in plain English:
 Or use shorthand triggers:
 - `ingest <file>` → runs the Ingest Workflow
 - `query: <question>` → runs the Query Workflow
-- `lint` → runs the Lint Workflow
+- `health` → runs the Health Workflow (fast, every session)
+- `lint` → runs the Lint Workflow (expensive, periodic)
 - `build graph` → runs the Graph Workflow
 
 ---
@@ -31,7 +32,10 @@ wiki/         # Agent owns this layer entirely
   concepts/   # Ideas, frameworks, methods, theories
   syntheses/  # Saved query answers
 graph/        # Auto-generated graph data
-tools/        # Optional standalone Python scripts
+tools/        # Standalone Python scripts
+  health.py   # Structural checks (deterministic, no LLM calls)
+  lint.py     # Content quality checks (uses LLM for semantic analysis)
+  build_graph.py  # Knowledge graph generation
 ```
 
 ---
@@ -155,6 +159,35 @@ Triggered by: *"query: <question>"*
 Triggered by: *"lint"*
 
 Check for: orphan pages, broken links, contradictions, stale content, missing entity pages, data gaps.
+
+---
+
+## Health Workflow
+
+Triggered by: *"health"*
+
+Run: `python tools/health.py` (or `python tools/health.py --json` for machine-readable output)
+
+Fast structural integrity checks — **zero LLM calls**, safe to run every session:
+- **Empty / stub files** — pages with no content beyond frontmatter (rate-limit damage)
+- **Index sync** — `wiki/index.md` entries vs actual files on disk
+- **Log coverage** — source pages missing a corresponding `ingest` entry in `wiki/log.md`
+
+Output a health report. Use `--save` to write to `wiki/health-report.md`.
+
+### Health vs Lint Boundary
+
+| Dimension | `health` | `lint` |
+|---|---|---|
+| **Scope** | Structural integrity | Content quality |
+| **LLM calls** | Zero | Yes (semantic analysis) |
+| **Cost** | Free | Tokens |
+| **Frequency** | Every session, before other work | Every 10-15 ingests |
+| **Checks** | Empty files, index sync, log sync | Orphans, broken links, contradictions, gaps |
+| **Tool** | `tools/health.py` | `tools/lint.py` |
+| **Run order** | First (pre-flight) | After health passes |
+
+> Run `health` first — linting an empty file wastes tokens.
 
 ---
 
