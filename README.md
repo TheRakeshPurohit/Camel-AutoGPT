@@ -47,7 +47,9 @@ gemini      # reads GEMINI.md
 All agents understand natural language and shorthand triggers:
 
 ```
-ingest raw/papers/my-paper.md              # ingest a source into the wiki
+ingest raw/papers/my-paper.md              # ingest a markdown source
+ingest report.pdf                          # auto-converts to .md, then ingests
+ingest slides.pptx notes.docx              # batch, mixed formats
 query: what are the main themes?           # synthesize answer from wiki pages
 lint                                       # find orphans, contradictions, gaps
 build graph                                # build graph.html from all wikilinks
@@ -63,7 +65,7 @@ Plain English works too:
 
 **Claude Code** also provides `/wiki-ingest`, `/wiki-query`, `/wiki-lint`, `/wiki-graph` as slash commands (via `.claude/commands/`). These are Claude Code-specific — other agents use the natural language triggers above, which work identically.
 
-Works with any markdown source — articles, papers, book chapters, meeting notes, journal entries, research summaries.
+Works with markdown, PDF, DOCX, PPTX, XLSX, HTML, TXT, CSV, JSON, XML, RST, EPUB, and more. Non-markdown files are auto-converted via [markitdown](https://github.com/microsoft/markitdown) at ingest time — no separate step needed.
 
 ## What You Get
 
@@ -226,52 +228,62 @@ If you want to keep the LLM Wiki Agent repository separate from your main person
 - **Graph View:** Filter out `index.md` and `log.md` (e.g. `-file:index.md -file:log.md`) to avoid them becoming gravity wells in your Obsidian graph.
 - **Dataview:** Use the community plugin [Dataview](https://blacksmithgu.github.io/obsidian-dataview/) to query the YAML frontmatter the agent automatically injects (e.g., `type: source`, `tags: [diary]`).
 
-## Converting Files, PDFs, and arXiv Papers
+## Multi-Format Ingest
 
-The wiki ingests Markdown files. Use `files_to_md.py` to convert files or `tools/pdf2md.py` to convert PDFs and arXiv papers before ingesting:
-
-```bash
-python tools/files_to_md.py --input_dir  ../raw/
-
-# optionally, if users would like to delete source files:
-python tools/files_to_md.py --input_dir ../raw/ --delete_source
-```
-
-Or if users want to use papers from arXiv:
+Drop any supported file directly into `ingest` — no separate conversion step needed:
 
 ```bash
-# arXiv papers — by ID or URL (uses arxiv2md, no PDF parsing needed)
-python tools/pdf2md.py 2401.12345
-python tools/pdf2md.py https://arxiv.org/abs/2401.12345
-
-# Local PDFs — auto-selects the best available backend
-python tools/pdf2md.py paper.pdf
-python tools/pdf2md.py paper.pdf --backend marker     # complex multi-column layouts
-python tools/pdf2md.py paper.pdf --backend pymupdf4llm # fast, lightweight
-
-# Custom output path
-python tools/pdf2md.py paper.pdf -o raw/papers/my-paper.md
+# These all work — auto-converted at ingest time
+ingest report.pdf
+ingest meeting-notes.docx
+ingest slides.pptx
+ingest data.xlsx
+ingest page.html
+ingest raw/mixed-folder/          # recursively finds all supported files
 ```
 
-Then ingest as usual:
+**Supported formats:**
+`.md` `.pdf` `.docx` `.pptx` `.xlsx` `.xls` `.html` `.htm` `.txt` `.csv` `.json` `.xml` `.rst` `.rtf` `.epub` `.ipynb` `.yaml` `.yml` `.tsv` `.wav` `.mp3`
+
+Non-markdown files are auto-converted via [markitdown](https://github.com/microsoft/markitdown). Use `--no-convert` to skip auto-conversion and process only `.md` files.
+
+### arXiv Papers (Advanced)
+
+For arXiv papers, use `tools/pdf2md.py` for higher-fidelity conversion:
+
+```bash
+python tools/pdf2md.py 2401.12345                      # by arXiv ID
+python tools/pdf2md.py https://arxiv.org/abs/2401.12345 # by URL
+python tools/pdf2md.py paper.pdf --backend marker       # complex multi-column PDFs
+```
+
+Then ingest the resulting `.md`:
 ```
 ingest raw/papers/my-paper.md
 ```
 
-Install at least one conversion backend:
+### Batch Directory Conversion (Advanced)
 
-| Backend | Install | Best for |
+To pre-convert an entire directory (useful for bulk imports):
+```bash
+python tools/file_to_md.py --input_dir raw/imports/
+python tools/file_to_md.py --input_dir raw/imports/ --delete_source  # remove originals
+```
+
+### Optional Dependencies
+
+| Package | Install | Used for |
 |---|---|---|
-| [arxiv2md](https://github.com/ryansingman/arxiv2md) | `pip install arxiv2markdown` | arXiv papers (uses structured source, avoids PDF parsing) |
-| [Marker](https://github.com/VikParuchuri/marker) | `pip install marker-pdf` | Complex academic PDFs with multi-column layouts, tables, equations |
-| [PyMuPDF4LLM](https://github.com/pymupdf/RAG) | `pip install pymupdf4llm` | Fast extraction from native-text PDFs (no GPU needed) |
-[markitdown](https://github.com/microsoft/markitdown) | `pip install markitdown` | for converting files to markdown
-[tqdm](https://github.com/tqdm/tqdm) | `pip install tqdm` | for progress bar during conversion
+| [markitdown](https://github.com/microsoft/markitdown) | `pip install markitdown` | Auto-conversion of non-.md files (required for multi-format ingest) |
+| [arxiv2md](https://github.com/ryansingman/arxiv2md) | `pip install arxiv2markdown` | arXiv papers via structured source |
+| [Marker](https://github.com/VikParuchuri/marker) | `pip install marker-pdf` | Complex academic PDFs with multi-column layouts |
+| [PyMuPDF4LLM](https://github.com/pymupdf/RAG) | `pip install pymupdf4llm` | Fast PDF extraction (no GPU needed) |
+| [tqdm](https://github.com/tqdm/tqdm) | `pip install tqdm` | Progress bar for batch directory conversion |
 
 ## Tips
 
-- Use `tools/files_to_md.py` to convert files to Markdown before injesting — see [Converting Files, PDFs, and arXiv Papers](#converting-files-pdfs-and-arxiv-papers)
-- Use `tools/pdf2md.py` to convert PDFs and arXiv papers to Markdown before ingesting — see [Converting Files, PDFs, and arXiv Papers](#converting-files-pdfs-and-arxiv-papers)
+- Just drop files (PDF, DOCX, etc.) into `raw/` and `ingest` them — conversion is automatic
+- For arXiv papers, `tools/pdf2md.py` gives higher-fidelity output than generic markitdown conversion
 - Query answers are shown first — the agent then asks if you want to file them as synthesis pages. Your explorations compound just like ingested sources
 - The wiki is a git repo — version history for free
 - Standalone Python scripts in `tools/` work without a coding agent (require `ANTHROPIC_API_KEY`)
