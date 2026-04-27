@@ -5,7 +5,14 @@ Ingest a source document into the LLM Wiki.
 Usage:
     python tools/ingest.py <path-to-source>
     python tools/ingest.py raw/articles/my-article.md
-    python tools/ingest.py --validate-only   # run validation on existing wiki
+    python tools/ingest.py report.pdf                  # auto-converts to .md
+    python tools/ingest.py slides.pptx notes.docx       # batch, mixed formats
+    python tools/ingest.py raw/mixed/ --no-convert      # skip auto-conversion
+    python tools/ingest.py --validate-only              # run validation only
+
+Supported formats (auto-converted via markitdown):
+    .pdf .docx .pptx .xlsx .html .htm .txt .csv .json .xml
+    .rst .rtf .epub .ipynb .yaml .yml .tsv .wav .mp3
 
 The LLM reads the source, extracts knowledge, and updates the wiki:
   - Creates wiki/sources/<slug>.md
@@ -22,6 +29,8 @@ import sys
 import json
 import hashlib
 import re
+import shutil
+import tempfile
 from pathlib import Path
 from collections import defaultdict
 from datetime import date
@@ -31,6 +40,17 @@ WIKI_DIR = REPO_ROOT / "wiki"
 LOG_FILE = WIKI_DIR / "log.md"
 INDEX_FILE = WIKI_DIR / "index.md"
 OVERVIEW_FILE = WIKI_DIR / "overview.md"
+
+# File extensions that can be auto-converted to markdown via markitdown.
+# .md files are ingested directly without conversion.
+CONVERTIBLE_EXTENSIONS = {
+    ".pdf", ".docx", ".pptx", ".xlsx", ".xls",
+    ".html", ".htm", ".txt", ".csv", ".json", ".xml",
+    ".rst", ".rtf", ".epub", ".ipynb",
+    ".yaml", ".yml", ".tsv",
+    ".wav", ".mp3",  # audio transcription via markitdown
+}
+ALL_SUPPORTED_EXTENSIONS = {".md"} | CONVERTIBLE_EXTENSIONS
 SCHEMA_FILE = REPO_ROOT / "CLAUDE.md"
 
 
@@ -169,11 +189,59 @@ def validate_ingest(changed_pages: list[str] | None = None) -> dict:
     return {"broken_links": broken_links, "unindexed": unindexed}
 
 
-def ingest(source_path: str):
+def convert_to_md(source: Path) -> Path:
+    """Convert a non-markdown file to .md using markitdown.
+
+    Returns the path to the converted .md file (placed next to the original
+    with a .md extension, or in a temp location if the source dir is read-only).
+    """
+    try:
+        from markitdown import MarkItDown
+    except ImportError:
+        print("Error: markitdown not installed (needed to convert non-.md files).")
+        print("  Install with: pip install markitdown")
+        sys.exit(1)
+
+    md = MarkItDown(enable_plugins=False)
+    try:
+        result = md.convert(str(source))
+    except Exception as e:
+        print(f"Error: failed to convert '{source.name}': {e}")
+        sys.exit(1)
+
+    # Write converted output next to source as <name>.md
+    output = source.with_suffix(".md")
+    try:
+        output.write_text(result.text_content, encoding="utf-8")
+    except OSError:
+        # Fallback: source directory may be read-only
+        tmp = Path(tempfile.mkdtemp()) / f"{source.stem}.md"
+        tmp.write_text(result.text_content, encoding="utf-8")
+        output = tmp
+
+    print(f"  ✓ Converted {source.name} → {output.name}")
+    return output
+
+
+def ingest(source_path: str, auto_convert: bool = True):
     source = Path(source_path)
     if not source.exists():
         print(f"Error: file not found: {source_path}")
         sys.exit(1)
+
+    # Auto-convert non-markdown files
+    converted_path = None
+    if source.suffix.lower() != ".md":
+        if not auto_convert:
+            print(f"  Skipping non-.md file (--no-convert): {source.name}")
+            return
+        if source.suffix.lower() not in CONVERTIBLE_EXTENSIONS:
+            print(f"  ⚠️  Unsupported format: {source.suffix} — skipping {source.name}")
+            print(f"       Supported: {', '.join(sorted(ALL_SUPPORTED_EXTENSIONS))}")
+            return
+        print(f"  Converting {source.name} to markdown...")
+        converted_path = convert_to_md(source)
+        source = converted_path
 
     source_content = source.read_text(encoding="utf-8")
     source_hash = sha256(source_content)
@@ -328,27 +396,37 @@ if __name__ == "__main__":
             print("All pages are indexed.")
         sys.exit(0)
 
-    if len(sys.argv) < 2:
+    # Parse flags
+    no_convert = "--no-convert" in sys.argv
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+
+    if not args:
         print("Usage: python tools/ingest.py <path-to-source> [path2 ...] [dir1 ...]")
         print("       python tools/ingest.py --validate-only")
+        print("       python tools/ingest.py --no-convert  # skip auto-conversion of non-.md files")
+        print(f"\nSupported formats: {', '.join(sorted(ALL_SUPPORTED_EXTENSIONS))}")
         sys.exit(1)
-        
+
     paths_to_process = []
-    for arg in sys.argv[1:]:
+    for arg in args:
         p = Path(arg)
-        if p.is_file() and p.suffix == ".md":
-            paths_to_process.append(p)
+        if p.is_file():
+            ext = p.suffix.lower()
+            if ext in ALL_SUPPORTED_EXTENSIONS:
+                paths_to_process.append(p)
+            else:
+                print(f"  ⚠️  Skipping unsupported format: {p.name} ({ext})")
         elif p.is_dir():
-            for f in p.rglob("*.md"):
-                if f.is_file():
+            for f in p.rglob("*"):
+                if f.is_file() and f.suffix.lower() in ALL_SUPPORTED_EXTENSIONS:
                     paths_to_process.append(f)
         else:
             import glob
             for f in glob.glob(arg, recursive=True):
                 g_p = Path(f)
-                if g_p.is_file() and g_p.suffix == ".md":
+                if g_p.is_file() and g_p.suffix.lower() in ALL_SUPPORTED_EXTENSIONS:
                     paths_to_process.append(g_p)
-                    
+
     # Deduplicate while preserving order
     unique_paths = []
     seen = set()
@@ -359,11 +437,12 @@ if __name__ == "__main__":
             unique_paths.append(p)
 
     if not unique_paths:
-        print("Error: no markdown files found to ingest.")
+        print("Error: no supported files found to ingest.")
+        print(f"Supported formats: {', '.join(sorted(ALL_SUPPORTED_EXTENSIONS))}")
         sys.exit(1)
-        
+
     if len(unique_paths) > 1:
         print(f"Batch mode: found {len(unique_paths)} files to ingest.")
-        
+
     for p in unique_paths:
-        ingest(str(p))
+        ingest(str(p), auto_convert=not no_convert)
