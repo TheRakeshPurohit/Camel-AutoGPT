@@ -285,6 +285,10 @@ NetworkX + Louvain + Claude + vis.js. No server, no database, runs entirely loca
 - [graphify](https://github.com/safishamsi/graphify) — graph-based knowledge extraction skill (inspiration for the graph layer)
 - [Vannevar Bush's Memex (1945)](https://en.wikipedia.org/wiki/Memex) — the original vision this resembles
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=SamurAIGPT/llm-wiki-agent&type=Date)](https://star-history.com/#SamurAIGPT/llm-wiki-agent&Date)
+
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.
