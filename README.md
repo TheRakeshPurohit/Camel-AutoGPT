@@ -28,6 +28,7 @@ graph/
 
 - [Open-Generative-AI](https://github.com/Anil-matcha/Open-Generative-AI) — Add AI image & video generation to your knowledge base pipeline
 - [Open-AI-Design-Agent](https://github.com/Anil-matcha/Open-AI-Design-Agent) — Autonomous AI design agent — pair with wiki agent for research + visual output
+- [AI-Voice-Agent](https://github.com/Anil-matcha/AI-Voice-Agent) — Self-hosted AI voice agent for real-time voice conversations, sales calls, and customer support
 
 ## Install
 
